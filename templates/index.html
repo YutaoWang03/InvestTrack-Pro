@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}InvestTrack Pro - 资产看板{% endblock %}
+
+{% block header_title %}
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <span>资产看板</span>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-tertiary);">
+            <i class="fa fa-clock-o"></i>
+            <span id="lastUpdateTime">最后更新: {{ latest_date|default:'--' }}</span>
+            <button onclick="refreshData()" style="background: none; border: none; color: var(--primary-color); cursor: pointer; font-size: 14px;">
+                <i class="fa fa-refresh"></i>
+            </button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <!-- Market Status Banner -->
+    <div style="background: linear-gradient(135deg, var(--primary-color), #7c3aed); border-radius: 16px; padding: 20px; margin-bottom: 24px; color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <h2 style="margin: 0; font-size: 24px; font-weight: 900;">投资组合总览</h2>
+                <p style="margin: 8px 0 0 0; opacity: 0.9;">实时监控您的投资表现和风险状况</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 12px; opacity: 0.8;">市场状态</div>
+                    <div style="font-size: 16px; font-weight: 600;">
+                        <i class="fa fa-circle" style="color: #00ff88; margin-right: 4px;"></i>
+                        开盘中
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 12px; opacity: 0.8;">数据延迟</div>
+                    <div style="font-size: 16px; font-weight: 600;">实时</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="grid grid-cols-4">
+        <div class="metric-card primary" style="border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
+            <div class="metric-content">
+                <div class="metric-label">资产总规模 (AUM)</div>
+                <div class="metric-value">¥{{ total_assets|default:'1,284,590.75' }}</div>
+                <div class="metric-trend trend-up">
+                    <i class="fa fa-arrow-up"></i>
+                    <span><strong>+2.3%</strong></span>
+                    <span style="color: var(--text-tertiary);">较上周</span>
+                </div>
+            </div>
+            <div class="metric-icon" style="background-color: rgba(22, 93, 255, 0.1); color: var(--primary-color); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+                <i class="fa fa-credit-card"></i>
+            </div>
+        </div>
+        
+        <div class="metric-card success" style="border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
+            <div class="metric-content">
+                <div class="metric-label">本月净盈亏</div>
+                <div class="metric-value">
+                    {% if monthly_profit > 0 %}
+                    +¥{{ monthly_profit|default:'34,520.20' }}
+                    {% else %}
+                    ¥{{ monthly_profit|default:'34,520.20' }}
+                    {% endif %}
+                </div>
+                <div class="metric-trend trend-up">
+                    <i class="fa fa-arrow-up"></i>
+                    <span><strong>0%</strong></span>
+                    <span style="color: var(--text-tertiary);">较上周</span>
+                </div>
+            </div>
+            <div class="metric-icon" style="background-color: rgba(0, 180, 42, 0.1); color: var(--success-color); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+                <i class="fa fa-line-chart"></i>
+            </div>
+        </div>
+        
+        <div class="metric-card danger" style="border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
+            <div class="metric-content">
+                <div class="metric-label">今日涨跌</div>
+                <div class="metric-value">
+                    {% if daily_change > 0 %}
+                    +¥{{ daily_change|default:'8,452.20' }}
+                    {% else %}
+                    ¥{{ daily_change|default:'8,452.20' }}
+                    {% endif %}
+                </div>
+                <div class="metric-trend {% if daily_change > 0 %}trend-up{% else %}trend-down{% endif %}">
+                    <i class="fa {% if daily_change > 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %}"></i>
+                    <span><strong>0%</strong></span>
+                    <span style="color: var(--text-tertiary);">较昨日</span>
+                </div>
+            </div>
+            <div class="metric-icon" style="background-color: rgba(245, 51, 73, 0.1); color: var(--danger-color); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+                <i class="fa fa-bolt"></i>
+            </div>
+        </div>
+        
+        <div class="metric-card warning" style="border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
+            <div class="metric-content">
+                <div class="metric-label">风险暴露 (Risk Exposure)</div>
+                <div class="metric-value">{{ risk_exposure|default:'68.4' }}%</div>
+                <div class="metric-trend trend-down">
+                    <i class="fa fa-arrow-down"></i>
+                    <span><strong>1.2%</strong></span>
+                    <span style="color: var(--text-tertiary);">本周下降</span>
+                </div>
+            </div>
+            <div class="metric-icon" style="background-color: rgba(255, 125, 0, 0.1); color: var(--warning-color); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+                <i class="fa fa-shield"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Alert Banner -->
+    <div id="riskAlertBanner" style="display: none; background: linear-gradient(135deg, #ff4757, #ff6b7a); border-radius: 12px; padding: 16px; margin-bottom: 24px; color: white;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa fa-exclamation-triangle" style="font-size: 20px;"></i>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 4px;">风险预警</div>
+                <div style="font-size: 14px; opacity: 0.9;" id="riskAlertMessage">检测到异常波动，建议关注持仓风险</div>
+            </div>
+            <button onclick="dismissRiskAlert()" style="margin-left: auto; background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer;">
+                知道了
+            </button>
+        </div>
+    </div>
+    
+    <!-- Performance Summary -->
+    <div class="grid grid-cols-2" style="margin-bottom: 24px;">
+        <div class="chart-container">
+            <h3 style="margin-bottom: 16px; font-weight: 900; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa fa-line-chart" style="color: var(--primary-color);"></i>
+                关键绩效指标 (KPI)
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div style="text-align: center; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">年化收益率</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--success-color);">+15.2%</div>
+                </div>
+                <div style="text-align: center; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">夏普比率</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--primary-color);">1.85</div>
+                </div>
+                <div style="text-align: center; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">最大回撤</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--danger-color);">-8.5%</div>
+                </div>
+                <div style="text-align: center; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">胜率</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--success-color);">72%</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h3 style="margin-bottom: 16px; font-weight: 900; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa fa-shield" style="color: var(--warning-color);"></i>
+                风险监控面板
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 14px;">VaR (95%置信度)</span>
+                    <span style="font-weight: 600; color: var(--danger-color);">¥12,450</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 14px;">Beta系数</span>
+                    <span style="font-weight: 600;">0.85</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 14px;">波动率 (年化)</span>
+                    <span style="font-weight: 600;">18.5%</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 14px;">相关性风险</span>
+                    <span style="font-weight: 600; color: var(--success-color);">低</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Equity Chart Row -->
+    <div class="chart-container" style="margin-bottom: 24px; border: 1px solid var(--border-color); border-radius: 16px; padding: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-weight: 600; font-size: 16px;">账户净值走势</h3>
+            <div style="display: flex; gap: 8px;">
+                <!-- 图表类型选择 -->
+                <div style="display: flex; gap: 4px;">
+                    <button class="chart-type-btn" data-type="equity" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-light); color: var(--text-primary); font-size: 14px; cursor: pointer;">资产净值</button>
+                    <button class="chart-type-btn" data-type="pnl" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-light); color: var(--text-primary); font-size: 14px; cursor: pointer;">日盈亏</button>
+                    <button class="chart-type-btn" data-type="change" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-light); color: var(--text-primary); font-size: 14px; cursor: pointer;">涨跌幅</button>
+                </div>
+                <!-- 时间范围选择 -->
+                <div style="display: flex; gap: 4px;">
+                    <button class="date-range-btn" data-days="7" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-light); color: var(--text-primary); font-size: 14px; cursor: pointer;">1W</button>
+                    <button class="date-range-btn" data-days="30" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-light); color: var(--text-primary); font-size: 14px; cursor: pointer;">1M</button>
+                    <button class="date-range-btn" data-days="365" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-light); color: var(--text-primary); font-size: 14px; cursor: pointer;">1Y</button>
+                </div>
+            </div>
+        </div>
+        <div id="equityChart" class="chart"></div>
+    </div>
+    
+    <!-- Allocation Chart Row -->
+    <div class="chart-container">
+        <h3 style="margin-bottom: 16px; font-weight: 900; font-size: 14px;">资产分配</h3>
+        <div id="allocationChart" class="chart"></div>
+    </div>
+    
+    <!-- Holdings Table -->
+    <div class="chart-container">
+        <h3 style="margin-bottom: 16px; font-weight: 900; font-size: 14px;">持仓概览</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>标的</th>
+                        <th>价格</th>
+                        <th>持仓收益率</th>
+                        <th>年化收益率</th>
+                        <th>持仓占比</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for position in positions %}
+                    <tr>
+                        <td>
+                            <div>
+                                <div><strong>{{ position.code.name }}</strong></div>
+                                <div style="font-size: 12px; color: var(--text-tertiary);">{{ position.code.code }}.HK</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                <div>¥{{ position.current_price|default:'0.00'|floatformat:2 }}</div>
+                                <div style="font-size: 12px; color: var(--text-tertiary);">成本: ¥{{ position.avg_cost|default:'0.00'|floatformat:2 }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if position.return_rate > 0 %}
+                            <span class="status-success">+{{ position.return_rate|default:'0.00'|floatformat:2 }}%</span>
+                            {% else %}
+                            <span class="status-danger">{{ position.return_rate|default:'0.00'|floatformat:2 }}%</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if position.annual_return > 0 %}
+                            <span class="status-success">+{{ position.annual_return|default:'0.00'|floatformat:2 }}%</span>
+                            {% else %}
+                            <span class="status-danger">{{ position.annual_return|default:'0.00'|floatformat:2 }}%</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ position.weight|default:'0'|floatformat:2 }}%</td>
+                        <td><button class="btn btn-secondary" onclick="navigateToAsset('{{ position.code.code }}')">查看详情</button></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 24px;">暂无持仓数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
