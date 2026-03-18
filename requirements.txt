@@ -1,0 +1,18 @@
+# InvestTrack 投资组合监控平台依赖包
+
+# Django框架
+Django==6.0.1
+
+# 数据处理
+pandas==3.0.0
+numpy==2.4.1
+
+# Excel文件处理
+openpyxl==3.1.5
+xlrd==2.0.2
+
+# 股票数据获取
+baostock==0.8.9
+
+# 环境变量支持（可选）
+python-dotenv==1.2.1
