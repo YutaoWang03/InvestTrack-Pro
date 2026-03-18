@@ -1,0 +1,703 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}投资监控 Pro{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary-color: #165DFF;
+            --success-color: #00B42A;
+            --danger-color: #F53349;
+            --warning-color: #FF7D00;
+            --bg-light: #FFFFFF;
+            --bg-base: #F7F8FA;
+            --border-color: #E5E6EB;
+            --text-primary: #1D2129;
+            --text-secondary: #4E5969;
+            --text-tertiary: #86909C;
+        }
+        
+        html.dark {
+            --primary-color: #165DFF;
+            --success-color: #00B42A;
+            --danger-color: #F53349;
+            --warning-color: #FF7D00;
+            --bg-light: #1e293b;
+            --bg-base: #0f172a;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+        
+        /* Add Google Fonts for Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 256px;
+            border-right: 1px solid var(--border-color);
+            background-color: var(--bg-light);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: width 0.3s ease;
+            z-index: 30;
+            position: relative;
+        }
+        
+        /* Ensure sidebar is visible on desktop */
+        @media (min-width: 769px) {
+            .sidebar {
+                display: flex !important;
+            }
+            .toggle-sidebar-btn {
+                display: none !important;
+            }
+        }
+        
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        
+        .sidebar.collapsed .nav-item {
+            position: relative;
+        }
+        
+        .sidebar.collapsed .nav-item:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--text-primary);
+            color: var(--bg-light);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-left: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .sidebar.collapsed .nav-item:hover::before {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-right-color: var(--text-primary);
+            z-index: 1000;
+            margin-left: 2px;
+        }
+        
+        /* Sidebar Header */
+        .sidebar-header {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            background-color: var(--bg-light);
+        }
+        
+        .sidebar-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+        }
+        
+        .sidebar-title i {
+            font-size: 22px;
+            color: var(--primary-color);
+            flex-shrink: 0;
+        }
+        
+        .sidebar-title span {
+            white-space: nowrap;
+            font-weight: 900;
+            font-size: 18px;
+            color: var(--text-primary);
+            transition: opacity 0.3s ease;
+        }
+        
+        .sidebar-title span .track-text {
+            color: #7c3aed;
+        }
+        
+        .toggle-collapse {
+            color: var(--text-secondary) !important;
+        }
+        
+        .toggle-collapse:hover {
+            background-color: var(--bg-base) !important;
+            border-radius: 8px;
+        }
+        
+        .sidebar.collapsed .sidebar-title span {
+            opacity: 0;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 0;
+            overflow-y: auto;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 24px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border-right: 4px solid transparent;
+        }
+        
+        .nav-item:hover {
+            background-color: var(--bg-base);
+        }
+        
+        .nav-item.active {
+            background-color: rgba(22, 93, 255, 0.1);
+            color: var(--primary-color);
+            border-right-color: var(--primary-color);
+        }
+        
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 18px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .nav-item span {
+            white-space: nowrap;
+            font-weight: bold;
+            transition: opacity 0.3s ease;
+        }
+        
+        .sidebar.collapsed .nav-item span {
+            opacity: 0;
+        }
+        
+        .sidebar-user {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .sidebar-user img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid rgba(22, 93, 255, 0.2);
+            flex-shrink: 0;
+        }
+        
+        .sidebar-user-info {
+            flex: 1;
+            overflow: hidden;
+            transition: opacity 0.3s ease;
+        }
+        
+        .sidebar.collapsed .sidebar-user-info {
+            opacity: 0;
+        }
+        
+        .sidebar-user-name {
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+        
+        .sidebar-user-status {
+            font-size: 10px;
+            color: var(--text-tertiary);
+            white-space: nowrap;
+        }
+        
+        /* Main Content */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: var(--bg-base);
+        }
+        
+        .header {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-light);
+            flex-shrink: 0;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .toggle-sidebar-btn {
+            display: none;
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 18px;
+        }
+        
+        @media (max-width: 768px) {
+            .toggle-sidebar-btn { display: block; }
+            .sidebar { display: none; position: absolute; height: 100vh; z-index: 1000; }
+            .sidebar.open { display: flex; }
+        }
+        
+        .header-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--text-primary);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 18px;
+            transition: all 0.2s ease;
+        }
+        
+        .theme-toggle:hover {
+            background-color: var(--bg-base);
+        }
+        
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Grid */
+        .grid {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .grid-cols-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        
+        @media (max-width: 1024px) {
+            .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (max-width: 640px) {
+            .grid-cols-2 { grid-template-columns: 1fr; }
+            .grid-cols-4 { grid-template-columns: 1fr; }
+        }
+        
+        /* Metric Card */
+        .metric-card {
+            background-color: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .metric-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+        }
+        
+        .metric-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 900;
+            margin-top: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .metric-trend {
+            font-size: 12px;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .trend-up { color: var(--danger-color); }
+        .trend-down { color: var(--success-color); }
+        
+        .metric-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-left: 12px;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+        
+        .metric-card:hover .metric-icon {
+            transform: rotate(12deg);
+        }
+        
+        .metric-card.primary .metric-value { color: var(--primary-color); }
+        .metric-card.primary .metric-icon { background-color: rgba(22, 93, 255, 0.1); color: var(--primary-color); }
+        
+        .metric-card.success .metric-value { color: var(--success-color); }
+        .metric-card.success .metric-icon { background-color: rgba(0, 180, 42, 0.1); color: var(--success-color); }
+        
+        .metric-card.danger .metric-value { color: var(--danger-color); }
+        .metric-card.danger .metric-icon { background-color: rgba(245, 51, 73, 0.1); color: var(--danger-color); }
+        
+        .metric-card.warning .metric-value { color: var(--warning-color); }
+        .metric-card.warning .metric-icon { background-color: rgba(255, 125, 0, 0.1); color: var(--warning-color); }
+        
+        /* Chart Container */
+        .chart-container {
+            background-color: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .chart {
+            width: 100%;
+            height: 400px;
+        }
+        
+        /* Table */
+        .table-container {
+            background-color: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background-color: var(--bg-base);
+        }
+        
+        th {
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        tbody tr:hover {
+            background-color: var(--bg-base);
+        }
+        
+        .status-success { color: var(--success-color); font-weight: 600; }
+        .status-danger { color: var(--danger-color); font-weight: 600; }
+        .status-warning { color: var(--warning-color); font-weight: 600; }
+        
+        /* Button */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="mainSidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <i class="fa fa-line-chart"></i>
+                    <span>Invest<span class="track-text">Track</span> Pro</span>
+                </div>
+                <button class="toggle-collapse" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa fa-outdent"></i>
+                </button>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" data-tooltip="资产看板 - 查看投资组合总览和实时净值">
+                    <i class="fa fa-tachometer"></i>
+                    <span>资产看板</span>
+                </a>
+                <a href="{% url 'position' %}" class="nav-item {% if request.resolver_match.url_name == 'position' %}active{% endif %}" data-tooltip="仓位管理 - 监控持仓风险和策略执行">
+                    <i class="fa fa-pie-chart"></i>
+                    <span>仓位管理</span>
+                </a>
+                <a href="{% url 'transaction' %}" class="nav-item {% if request.resolver_match.url_name == 'transaction' %}active{% endif %}" data-tooltip="交易记录 - 管理交易流水和持仓变动">
+                    <i class="fa fa-exchange"></i>
+                    <span>交易记录</span>
+                </a>
+                <a href="{% url 'data_center' %}" class="nav-item {% if request.resolver_match.url_name == 'data_center' %}active{% endif %}" data-tooltip="数据中心 - 导入行情数据和系统配置">
+                    <i class="fa fa-database"></i>
+                    <span>数据中心</span>
+                </a>
+                <a href="{% url 'sandbox' %}" class="nav-item {% if request.resolver_match.url_name == 'sandbox' %}active{% endif %}" data-tooltip="沙盘模拟 - 投资策略回测和风险测试">
+                    <i class="fa fa-flask"></i>
+                    <span>沙盘模拟</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-user">
+                <img src="https://picsum.photos/40/40?random=1" alt="User">
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name">Senior Trader</div>
+                    <div class="sidebar-user-status">Pro License Active</div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <div class="main">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar-btn" style="color: var(--text-secondary); font-size: 18px; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    <h1 class="header-title">{% block header_title %}{% endblock %}</h1>
+                </div>
+                <div class="header-right">
+                    <button class="theme-toggle" onclick="toggleTheme()" style="color: var(--text-secondary); font-size: 18px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa fa-moon-o"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Content -->
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Toggle theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        }
+        
+        // Initialize theme
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.classList.add('dark');
+        }
+        
+        // Toggle sidebar collapse
+        document.querySelector('.toggle-collapse').addEventListener('click', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const icon = this.querySelector('i');
+            sidebar.classList.toggle('collapsed');
+            icon.className = sidebar.classList.contains('collapsed') ? 'fa fa-indent' : 'fa fa-outdent';
+            
+            // 保存状态到localStorage，确保点击后常驻
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+            
+            // 如果展开，确保常驻显示
+            if (!isCollapsed) {
+                sidebar.style.position = 'relative';
+                sidebar.style.zIndex = 'auto';
+            }
+        });
+        
+        // Toggle sidebar for mobile
+        document.querySelector('.toggle-sidebar-btn').addEventListener('click', function() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('open');
+        });
+        
+        // Initialize sidebar state
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const toggleIcon = document.querySelector('.toggle-collapse i');
+            
+            // Debug: Log sidebar state
+            console.log('Sidebar element:', sidebar);
+            console.log('Sidebar display:', window.getComputedStyle(sidebar).display);
+            console.log('Screen width:', window.innerWidth);
+            
+            // Initialize collapsed state from localStorage
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+                if (toggleIcon) {
+                    toggleIcon.className = 'fa fa-indent';
+                }
+            }
+            
+            // Ensure sidebar is visible on desktop
+            if (window.innerWidth > 768) {
+                sidebar.style.display = 'flex';
+            }
+        });
+        
+        // Handle navbar active state
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+            const currentPath = window.location.pathname;
+            const itemPath = item.getAttribute('href');
+            if (currentPath === itemPath) {
+                item.classList.add('active');
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.querySelector('.sidebar');
+            if (window.innerWidth > 768) {
+                sidebar.style.display = 'flex';
+                sidebar.classList.remove('open');
+            } else {
+                sidebar.style.display = '';
+            }
+        });
+        
+        // Navigate to asset detail
+        function navigateToAsset(code) {
+            window.location.href = `{% url 'asset_detail' %}?code=${code}`;
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
